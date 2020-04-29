@@ -50,7 +50,7 @@ public:
 	};
 private:
 	constexpr static double alpha = 0.77;
-	constexpr static double beta = 0.40;
+	constexpr static double beta = 0.35;
 	int cnt;
 	Compare cmp;
 	Tree *_root;
