@@ -11,7 +11,6 @@
 #include <cstddef>
 #include "utility.hpp"
 #include "exceptions.hpp"
-#include <iostream>
 
 namespace sjtu {
 
@@ -29,7 +28,7 @@ public:
 		value_type *_data;   // TODO: 有点疑惑 ！    应该是为了迭代器的 -> 操作, 不然 应该会有memory_leak
 		int _size;           //  the total num of the nodes in the subtree, both existing and non-existent.
 		bool _exist;         //  whether this node exists.
-		int _fact;           //  Actual number of nodes in the subtree.
+		int _fact;           //  Actual number of nodes in the subtree
 
 		Tree (value_type* _val = nullptr) : _size(1), _exist(true), _fact(1), _l(nullptr), _r(nullptr), _data(_val) {
 			if (_val)	_data = new value_type(*_val);
@@ -51,10 +50,12 @@ public:
 private:
 	constexpr static double alpha = 0.77;
 	constexpr static double beta = 0.35;
-	int cnt;
+	const int total = 100000;
+	int rec_cnt, del_cnt;
 	Compare cmp;
 	Tree *_root;
-	Tree ** _rec;
+	Tree ** _rec_array;
+	Tree ** _del_array;
 
 public:   // TODO 为什么一定要public
 	class const_iterator;
@@ -282,9 +283,12 @@ public:   // TODO 为什么一定要public
 	};
 
 public:
-	map(): _root(nullptr), _rec(nullptr) {}
+	map(): _root(nullptr), _rec_array(nullptr), del_cnt(0) {
+		_del_array = new Tree* [total];
+	}
 	
-	map(const map &other): _rec(nullptr) {
+	map(const map &other): _rec_array(nullptr), del_cnt(0) {
+		_del_array = new Tree* [total];
 		if (!other._root) _root = nullptr;
 		else CopySubTree(_root, other._root);
 	}
@@ -297,6 +301,8 @@ public:
 	}
 	~map() {
 		DelSubTree(_root);
+		Flush();
+		delete [] _del_array;
 	}
 
 	T & at(const Key &key) {
@@ -395,16 +401,11 @@ public:
 private:
 	bool IsBalance(Tree *tr) const{
 		// 当前节点的左子树或右子树的size  > 当前结点的大小 乘 alpha 
-		// 或以当前结点为根的子树中被删掉的点 > 该子树大小的 30% 
+		// 或以当前结点为根的子树中被删掉的点 > 该子树大小的 beta
 		if (tr -> _l != nullptr && tr -> _l -> _size > tr -> _size * alpha) return false;
 		if (tr -> _r != nullptr && tr -> _r -> _size > tr -> _size * alpha) return false;
 		if (tr -> _size - tr -> _fact > tr -> _size * beta) return false;
 		return true;
-
-		// if (tr -> _l != nullptr && tr -> _l -> _size > tr -> _size * alpha) return false;
-		// if (tr -> _r != nullptr && tr -> _r -> _size > tr -> _size * alpha) return false;
-		// if (tr -> _size - tr -> _fact > tr -> _size * beta) return false;
-		// return true;
 	}
 
 	void PushUp(Tree *tmp, Tree *ed) {
@@ -434,48 +435,21 @@ private:
 		else tmp = nullptr;
 	}
 
-	// 中序遍历完之后的结点就是一个一个分立的结点
-	// 这一步注意要释放内存！！
-	void InOrder(Tree *&tmp) {
-		if (tmp -> _l) InOrder(tmp -> _l);
-		if (tmp -> _exist) _rec[cnt ++] = tmp;
-		if (tmp -> _r) InOrder(tmp -> _r);
-		if (tmp -> _exist) tmp -> ReConstruct();
-		else delete tmp;
-		tmp = nullptr;
-	}
 	void DelSubTree(Tree *&tmp) {
 		if (tmp == nullptr) return ;
 		if (tmp -> _l) DelSubTree(tmp -> _l);
 		if (tmp -> _r) DelSubTree(tmp -> _r);
-		delete tmp;
+		
+		if (del_cnt >= total - 10)	Flush();
+		_del_array[del_cnt ++] = tmp;
 		tmp = nullptr;
 	}
-	Tree* Lift(int l, int r) const{
-		if (l > r) return nullptr;
-		if (l == r) return _rec[l];
-		int mid = l + r >> 1;
-		Tree *tmp = _rec[mid];
-		tmp -> _l = Lift(l, mid - 1);
-		tmp -> _r = Lift(mid + 1, r);
-		tmp -> _size = tmp -> _fact = r - l + 1;
-		return tmp;
-	}
 
-	void ReBuild(Tree *&tmp) {
-		if (tmp == nullptr) return ;
-		if (tmp -> _fact == 0) {
-			pushup(_root, tmp, tmp -> _size);
-			DelSubTree(tmp);
-			return ;
+	void Flush() {
+		for (int i = 0; i < del_cnt; i ++) {
+			delete _del_array[i];
 		}
-		cnt = 0;
-		_rec = new Tree* [tmp -> _fact + 1];
-		InOrder(tmp);
-		tmp = Lift(0, cnt - 1);
-		PushUp(_root, tmp);
-		delete [] _rec;
-		_rec = nullptr;
+		del_cnt = 0;
 	}
 
 	// 从根结点开始检查是否平衡
@@ -492,6 +466,47 @@ private:
 		else if (cmp(ed -> _data -> first, tmp -> _data -> first)) {
 			return Check(tmp -> _l, ed);
 		}
+	}
+
+	void ReBuild(Tree *&tmp) {
+		if (tmp == nullptr) return ;
+		if (tmp -> _fact == 0) {
+			pushup(_root, tmp, tmp -> _size);
+			DelSubTree(tmp);
+			return ;
+		}
+		rec_cnt = 0;
+		_rec_array = new Tree* [tmp -> _fact + 1];
+		InOrder(tmp);
+		tmp = Lift(0, rec_cnt - 1);
+		PushUp(_root, tmp);
+		delete [] _rec_array;
+		_rec_array = nullptr;
+	}
+
+	Tree* Lift(int l, int r) const{
+		if (l > r) return nullptr;
+		if (l == r) return _rec_array[l];
+		int mid = l + r >> 1;
+		Tree *tmp = _rec_array[mid];
+		tmp -> _l = Lift(l, mid - 1);
+		tmp -> _r = Lift(mid + 1, r);
+		tmp -> _size = tmp -> _fact = r - l + 1;
+		return tmp;
+	}
+
+	// 中序遍历完之后的结点就是一个一个分立的结点
+	// 这一步注意要释放内存！！
+	void InOrder(Tree *&tmp) {
+		if (tmp -> _l) InOrder(tmp -> _l);
+		if (tmp -> _exist) _rec_array[rec_cnt ++] = tmp;
+		if (tmp -> _r) InOrder(tmp -> _r);
+		if (tmp -> _exist) tmp -> ReConstruct();
+		else {
+			if (del_cnt >= total - 10)	Flush();
+			_del_array[del_cnt ++] = tmp;
+		}
+		tmp = nullptr;
 	}
 
 	pair<Tree*, Tree*> Find(const Key &key) const{
@@ -520,46 +535,6 @@ private:
 		else if (cmp(tmp -> _data -> first, key)) erase(tmp -> _r, key);
 		else erase(tmp -> _l, key);
 	}
-	// void erase(Tree *tmp, const Key &key) {
-	// 	Tree **p = erase_1(tmp, key);
-	// 	if (p) ReBuild(*p);
-	// 	return ;
-	// }
-
-	// Tree** erase_1(Tree *&tmp, const Key &key) {
-	// 	tmp -> _fact --;
-	// 	Tree **p = nullptr;
-	// 	if (!cmp(tmp -> _data -> first, key) && !cmp(key, tmp -> _data -> first)) 
-	// 	{
-	// 		if (tmp -> _exist) tmp -> _exist = false;
-	// 	}
-	// 	else if (cmp(tmp -> _data -> first, key)) p = erase_1(tmp -> _r, key);
-	// 	else p = erase_1(tmp -> _l, key);
-
-	// 	if (!IsBalance(tmp)) p = &tmp;
-	// 	return p;
-	// }
-
-	// void Insert_2(Tree *&tmp, const Key &key) {
-	// 	if (tmp == nullptr) {
-	// 		T value;
-	// 		tmp = new Tree();
-	// 		tmp -> _data = new value_type(key, value);
-	// 		Check(_root, tmp);
-	// 		return ;
-	// 	}
-	// 	tmp -> _size ++;
-	// 	tmp -> _fact ++;
-	// 	if (cmp(tmp -> _data -> first, key)) Insert_2(tmp -> _r, key);
-	// 	else Insert_2(tmp -> _l, key);
-		
-	// 	// if (!IsBalance(tmp)) p = &tmp;
-	// 	// return p;
-	// }
-	// iterator Insert_1(Tree *&tmp, const Key &key) {
-	// 	Insert_2(tmp, key);
-	// 	return find(key);
-	// }
 
 	// 递归的同时记录最上面一个不平衡的点, 妙， 
 	Tree** Insert_2(Tree *&tmp, const Key &key) {

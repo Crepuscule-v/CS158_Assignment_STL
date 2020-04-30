@@ -80,9 +80,12 @@ void tester(void) {
 }
 
 int main(void) {
+	int st = clock();
 	std::ios::sync_with_stdio(false);
 	std::cin.tie(0);
 	std::cout.tie(0);
 	tester();
 	std::cout << Integer::counter << std::endl;
+	int ed = clock();
+	std::cout << std::endl << (double)(ed - st) / CLOCKS_PER_SEC;
 }

@@ -607,16 +607,19 @@ int main() {
 #ifdef SPECIAL
 	puts("AATree-Map Checker Version 1.2");
 #endif
+	int st = clock();
 	tester1();
-	// tester2();
-	// tester3();
-	// tester4();
-	// tester5();
-	// tester6();
-	// tester7();
-	// tester8();
-	// tester9();
-	// tester10();
-	// tester11();
+	tester2();
+	tester3();
+	tester4();
+	tester5();
+	tester6();
+	tester7();
+	tester8();
+	tester9();
+	tester10();
+	tester11();
+	int ed = clock();
+	std::cout << (double)(ed - st) / CLOCKS_PER_SEC;
 	return 0;
 }

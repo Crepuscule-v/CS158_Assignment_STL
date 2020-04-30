@@ -207,6 +207,7 @@ void test_copy()
 	puts("");
 }
 int main(){
+	int st = clock();
 	test_insert();
 	test_erase();
 	test_const_at();
@@ -215,4 +216,6 @@ int main(){
 	test_throw();
 	test_const_throw();
 	test_copy();
+	int ed = clock();
+	std::cout << "总共用时 ： " << (double) (ed -st)/CLOCKS_PER_SEC << "ms\n";
 }

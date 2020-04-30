@@ -114,6 +114,9 @@ void tester(void) {
 }
 
 int main(void) {
+	int st = clock();
 	tester();
 	std::cout << Integer::counter << std::endl;
+	int ed = clock();
+	std::cout << (double)(ed - st) / CLOCKS_PER_SEC;
 }
