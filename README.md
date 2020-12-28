@@ -1,4 +1,4 @@
-# CS-158 DataStructure
+# CS158 DataStructure
 
 - [x] **vector** 
 - [x] **deque** 
