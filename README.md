@@ -1,7 +1,5 @@
-# CS158 数据结构
+# CS-158 DataStructure
 
-## 包括
-
-- [x] vector 
-- [x] deque 
-- [x] map (Based on scapegoat tree)
+- [x] **vector** 
+- [x] **deque** 
+- [x] **map** (Based on scapegoat tree)
